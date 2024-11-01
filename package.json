@@ -1,0 +1,26 @@
+{
+  "name": "puppeteer-crawler",
+  "version": "0.1.0",
+  "description": "基于 Puppeteer 编写的网络爬虫",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ViewRoom/puppeteer-crawler.git"
+  },
+  "author": "ViewRoom",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ViewRoom/puppeteer-crawler/issues"
+  },
+  "homepage": "https://github.com/ViewRoom/puppeteer-crawler#readme",
+  "dependencies": {
+    "puppeteer": "^23.6.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}
