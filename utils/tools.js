@@ -1,35 +1,61 @@
-const fs = require("fs");
-const path = require("path");
-const http = require("http");
-const https = require("https");
+import fs from "fs";
+import path from "path";
+import https from "https";
+
+/**
+ * 创建目录
+ * @param {string} filePath
+ */
+function mkdir(filePath) {
+  const arr = filePath.split("/");
+  let dir = arr[0];
+  for (let i = 1; i < arr.length; i++) {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir);
+    }
+    dir = dir + "/" + arr[i];
+  }
+  fs.writeFileSync(filePath, "");
+}
 
 /**
  * 写入文件到本地
  * @param {string} fileName 文件名称
  * @param {*} data 文件内容
  */
-function writeFile(fileName, data) {
+function saveFile(fileName, data) {
   fs.writeFileSync(path.join(__dirname + "/data", fileName), data);
 }
 
 /**
  * 保存图片到本地
- * @param {string} url 图片地址
- * @param {string} path 图片保存路径
+ * @param {string} imgUrl 图片地址
+ * @param {string} imgPath 图片保存路径
  */
-function saveImage(url, path) {
-  https.get(url, function (req, res) {
-    let imgData = "";
-    req.on("data", function (chunk) {
-      imgData += chunk;
-    });
-    req.setEncoding("binary");
-    req.on("end", function () {
-      fs.writeFile(path, imgData, "binary", function (err) {
-        console.log("保存图片成功" + path);
+function saveImage(imgUrl, imgPath) {
+  if (!fs.existsSync(imgPath)) {
+    mkdir(imgPath);
+  }
+
+  https
+    .get(imgUrl, function (res) {
+      let imgData = "";
+      res.setEncoding("binary");
+      res.on("data", function (chunk) {
+        imgData += chunk;
       });
+      res.on("end", function () {
+        try {
+          fs.writeFileSync(imgPath, imgData, "binary");
+          console.log("保存图片成功", imgPath);
+        } catch (err) {
+          console.log("保存图片失败", err.message);
+        }
+      });
+    })
+    .on("error", function (err) {
+      console.error("请求图片时发生错误:", err.message);
     });
-  });
 }
 
 /**
@@ -50,4 +76,4 @@ function scrollToBottom(distance = 600, interval = 500) {
   }, interval);
 }
 
-export { writeFile, saveImage, scrollToBottom };
+export { mkdir, saveFile, saveImage, scrollToBottom };
