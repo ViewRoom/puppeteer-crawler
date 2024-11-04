@@ -19,6 +19,9 @@ async function init() {
 
   // 调用函数开始爬取Brotato数据
   await crawlBrotatoData(browser);
+
+  // 关闭浏览器
+  await browser.close();
 }
 
 /**

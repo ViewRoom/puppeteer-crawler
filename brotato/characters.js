@@ -64,9 +64,11 @@ async function crawlCharactersData(browser, brotatoBaseUrl, brotatoPage) {
     // 提取图片名称
     let imgName = url.split("/").pop();
     imgName = imgName.split("-")[1] || imgName;
+    // 图片保存路径
+    const imgPath = "./brotato/characters/";
 
     // 调用函数保存图片
-    saveImage(imgUrl, "./brotato/characters/" + imgName);
+    saveImage(imgPath, imgName, imgUrl);
   }
 }
 

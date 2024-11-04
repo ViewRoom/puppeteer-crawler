@@ -7,35 +7,39 @@ import https from "https";
  * @param {string} filePath
  */
 function mkdir(filePath) {
-  const arr = filePath.split("/");
-  let dir = arr[0];
-  for (let i = 1; i < arr.length; i++) {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir);
+  try {
+    if (!fs.existsSync(filePath)) {
+      fs.mkdirSync(path.dirname(filePath), { recursive: true });
     }
-    dir = dir + "/" + arr[i];
+  } catch (error) {
+    console.log("创建目录失败", error);
   }
-  fs.writeFileSync(filePath, "");
 }
 
 /**
  * 写入文件到本地
+ * @param {string} filePath 文件路径
  * @param {string} fileName 文件名称
  * @param {*} data 文件内容
  */
-function saveFile(fileName, data) {
-  fs.writeFileSync(path.join(__dirname + "/data", fileName), data);
+function saveFile(filePath, fileName, data) {
+  mkdir(filePath + fileName);
+  try {
+    fs.writeFileSync(path.join(filePath, fileName), data);
+  } catch (error) {
+    console.log("保存文件失败", error);
+  }
 }
 
 /**
  * 保存图片到本地
- * @param {string} imgUrl 图片地址
  * @param {string} imgPath 图片保存路径
+ * @param {string} imgName 图片名称
+ * @param {string} imgUrl 图片地址
  */
-function saveImage(imgUrl, imgPath) {
-  if (!fs.existsSync(imgPath)) {
-    mkdir(imgPath);
-  }
+function saveImage(imgPath, imgName, imgUrl) {
+  const fullPath = imgPath + imgName;
+  mkdir(fullPath);
 
   https
     .get(imgUrl, function (res) {
@@ -46,8 +50,8 @@ function saveImage(imgUrl, imgPath) {
       });
       res.on("end", function () {
         try {
-          fs.writeFileSync(imgPath, imgData, "binary");
-          console.log("保存图片成功", imgPath);
+          fs.writeFileSync(fullPath, imgData, "binary");
+          console.log("保存图片成功", fullPath);
         } catch (err) {
           console.log("保存图片失败", err.message);
         }
