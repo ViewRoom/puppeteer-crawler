@@ -64,20 +64,57 @@ function saveImage(imgPath, imgName, imgUrl) {
 
 /**
  * 页面滚动到底部
+ * @param {Object} page 页面对象
  * @param {number} distance 每次滚动的距离(单位是px)，默认为600
  * @param {number} interval 每次滚动的时间间隔(单位是ms)，默认为500
  */
-function scrollToBottom(distance = 600, interval = 500) {
-  let totalHeight = 0;
-  let timer = setInterval(() => {
-    window.scrollBy(0, distance);
-    totalHeight += distance;
+function scrollToBottom(page, distance = 600, interval = 500) {
+  return page.evaluate(
+    ({ distance, interval }) => {
+      return new Promise((resolve) => {
+        let totalHeight = 0;
+        const timer = setInterval(() => {
+          window.scrollBy(0, distance);
+          totalHeight += distance;
 
-    if (totalHeight >= document.body.scrollHeight) {
-      clearInterval(timer);
-      resolve();
-    }
-  }, interval);
+          if (totalHeight >= document.body.scrollHeight) {
+            clearInterval(timer);
+            resolve();
+          }
+        }, interval);
+      });
+    },
+    { distance, interval }
+  );
 }
 
-export { mkdir, saveFile, saveImage, scrollToBottom };
+/**
+ * 获取目标页面
+ * @param {Object} browser 浏览器
+ * @param {Object} sourcePage 源页面
+ * @param {string} selector 选择器
+ * @returns {Object} 目标页面
+ */
+async function getTargetPageByA(browser, sourcePage, selector) {
+  // 等待 a 标签出现
+  await sourcePage.waitForSelector(selector);
+
+  // 获取 a 标签的 href 属性
+  const charactersHref = await sourcePage.$eval(selector, (el) => el.href);
+
+  // 在新标签页中打开链接
+  await sourcePage.$eval(selector, (el) => el.setAttribute("target", "_blank"));
+
+  // 点击 a 标签
+  await sourcePage.click(selector);
+
+  // 等待新页面加载完成
+  const newTarget = await browser.waitForTarget(
+    (target) => target.url() === charactersHref
+  );
+  const targetPage = await newTarget.page();
+
+  return targetPage;
+}
+
+export { mkdir, saveFile, saveImage, scrollToBottom, getTargetPageByA };

@@ -1,4 +1,4 @@
-import { saveImage } from "../utils/tools.js";
+import { saveImage, getTargetPageByA } from "../utils/tools.js";
 
 /**
  * 获取角色数据
@@ -9,27 +9,11 @@ import { saveImage } from "../utils/tools.js";
 async function crawlCharactersData(browser, brotatoBaseUrl, brotatoPage) {
   // 等待角色链接可点击
   const charactersSelector = 'a[title="Characters"]';
-  await brotatoPage.waitForSelector(charactersSelector);
-
-  // 获取角色链接
-  const charactersHref = await brotatoPage.$eval(
-    charactersSelector,
-    (el) => el.href
+  const charactersPage = await getTargetPageByA(
+    browser,
+    brotatoPage,
+    charactersSelector
   );
-
-  // 在新标签页中打开
-  await brotatoPage.$eval(
-    charactersSelector,
-    (el, value) => el.setAttribute("target", value),
-    "_blank"
-  );
-
-  // 点击角色链接
-  await brotatoPage.click(charactersSelector);
-
-  // 等待角色页面加载完成
-  const target = await browser.waitForTarget((t) => t.url() === charactersHref);
-  const charactersPage = await target.page();
 
   // 获取角色表格选择器
   const charactersTableSelector = ".navbox-characters";

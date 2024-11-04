@@ -1,5 +1,6 @@
 import puppeteer from "puppeteer";
 import { crawlCharactersData } from "./characters.js";
+import { crawlWeaponsData } from "./weapons.js";
 
 /**
  * 初始化Brotato数据
@@ -46,6 +47,8 @@ async function crawlBrotatoData(browser) {
 
   // 爬取角色数据
   await crawlCharactersData(browser, brotatoBaseUrl, brotatoPage);
+  // 爬取武器数据
+  await crawlWeaponsData(browser, brotatoBaseUrl, brotatoPage);
 }
 
 // 执行初始化函数，开始爬取数据流程
