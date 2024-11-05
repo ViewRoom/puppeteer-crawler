@@ -42,18 +42,18 @@ async function crawlCharactersData(browser, brotatoBaseUrl, brotatoPage) {
   }
 
   // 保存角色图片
-  for (const url of imgUrls) {
+  const imgPath = "./brotato/characters/";
+  const savePromises = imgUrls.map((url) => {
     // 拼接完整的图片URL
     const imgUrl = brotatoBaseUrl + url;
     // 提取图片名称
     let imgName = url.split("/").pop();
     imgName = imgName.split("-")[1] || imgName;
-    // 图片保存路径
-    const imgPath = "./brotato/characters/";
-
     // 调用函数保存图片
-    saveImage(imgPath, imgName, imgUrl);
-  }
+    return saveImage(imgPath, imgName, imgUrl);
+  });
+
+  await Promise.all(savePromises);
 }
 
 export { crawlCharactersData };

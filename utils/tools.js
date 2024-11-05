@@ -68,8 +68,8 @@ function saveImage(imgPath, imgName, imgUrl) {
  * @param {number} distance 每次滚动的距离(单位是px)，默认为600
  * @param {number} interval 每次滚动的时间间隔(单位是ms)，默认为500
  */
-function scrollToBottom(page, distance = 600, interval = 500) {
-  return page.evaluate(
+async function scrollToBottom(page, distance = 600, interval = 500) {
+  return await page.evaluate(
     ({ distance, interval }) => {
       return new Promise((resolve) => {
         let totalHeight = 0;

@@ -42,7 +42,7 @@ async function crawlWeaponsData(browser, brotatoBaseUrl, brotatoPage) {
       const weaponsTableTdList = await weaponsTableRowEle.$$("td");
 
       if (weaponsTableTdList.length > 0) {
-        // 假设第一个单元格内总是有图片
+        // 获取第一个单元格内图片
         const weaponsTableRowFirstEleImg = await weaponsTableTdList[0].$("img");
 
         // 获取图片的srcset属性值
