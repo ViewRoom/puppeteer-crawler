@@ -4,6 +4,7 @@ import { crawlWeaponsData } from "./weapons.js";
 import { crawlStatsData } from "./stats.js";
 import { crawlItemsData } from "./items.js";
 import { crawlDangersData } from "./dangers.js";
+import { crawlEnemiesData } from "./enemies.js";
 
 /**
  * 初始化Brotato数据
@@ -58,6 +59,8 @@ async function crawlBrotatoData(browser) {
   await crawlItemsData(browser, brotatoBaseUrl, brotatoPage);
   // 爬取难度数据
   await crawlDangersData(browser, brotatoBaseUrl, brotatoPage);
+  // 爬取敌人数据
+  await crawlEnemiesData(browser, brotatoBaseUrl, brotatoPage);
 }
 
 // 执行初始化函数，开始爬取数据流程
