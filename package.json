@@ -5,7 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "brotato": "nodemon ./brotato/index.js"
+    "brotato": "nodemon ./brotato/index.js",
+    "i7text": "nodemon ./i7text/index.js"
   },
   "repository": {
     "type": "git",

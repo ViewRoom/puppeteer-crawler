@@ -32,6 +32,26 @@ function saveFile(filePath, fileName, data) {
 }
 
 /**
+ * 写入文件内容
+ * @param {string} filePath 文件路径
+ * @param {string} fileName 文件名称
+ * @param {string} content 文件内容
+ */
+function appendFileContent(filePath, fileName, content) {
+  mkdir(filePath + fileName);
+  try {
+    // 读取文件内容
+    const data = fs.readFileSync(path.join(filePath, fileName));
+    // 附加新内容
+    const updatedContent = data + content;
+    // 写回文件
+    fs.writeFileSync(path.join(filePath, fileName), updatedContent);
+  } catch (err) {
+    console.error("文件操作出错:", err);
+  }
+}
+
+/**
  * 保存图片到本地
  * @param {string} imgPath 图片保存路径
  * @param {string} imgName 图片名称
@@ -117,4 +137,11 @@ async function getTargetPageByA(browser, sourcePage, selector) {
   return targetPage;
 }
 
-export { mkdir, saveFile, saveImage, scrollToBottom, getTargetPageByA };
+export {
+  mkdir,
+  saveFile,
+  saveImage,
+  scrollToBottom,
+  getTargetPageByA,
+  appendFileContent,
+};
