@@ -11,7 +11,7 @@ import {
  */
 async function crawlChapterData(browser, baseUrl, basePage) {
   // 获取小说名称和作家
-  const titleAndAuthorSelector = ".ml_gj > h1, .ml_gj > span";
+  const titleAndAuthorSelector = ".book-title > h1, .book-stats > b:first-child";
 
   await basePage.waitForSelector(titleAndAuthorSelector);
   const [titleElement, authorElement] = await basePage.$$eval(
@@ -31,7 +31,7 @@ async function crawlChapterData(browser, baseUrl, basePage) {
   saveFile(`./data/`, `${title}.txt`, `小说名称：${title}\n作者：${author}\n`);
 
   // 获取章节列表
-  const chapterListSelector = ".ml_main > dl > dd > a";
+  const chapterListSelector = "#allchapter .details > dl > dd > a";
   await basePage.waitForSelector(chapterListSelector);
   const chapterElements = await basePage.$$(chapterListSelector);
 
@@ -47,8 +47,8 @@ async function crawlChapterData(browser, baseUrl, basePage) {
     try {
       await chapterPage.goto(url);
 
-      const chapterNameSelector = ".ydleft > h2";
-      const chapterContentSelector = ".yd_text2";
+      const chapterNameSelector = "#BookCon > h1";
+      const chapterContentSelector = "#BookCon #BookText ";
       await chapterPage.waitForSelector(chapterNameSelector);
       await chapterPage.waitForSelector(chapterContentSelector);
 

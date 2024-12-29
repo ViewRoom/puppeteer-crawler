@@ -14,7 +14,7 @@ async function init() {
     // 启动时最大化浏览器窗口
     args: ["--start-maximized"],
     // 操作速度
-    // slowMo: 250,
+    slowMo: 250,
   });
 
   // 调用函数开始爬取数据
@@ -31,10 +31,9 @@ async function init() {
 async function crawlData(browser) {
   // 定义基础URL
   const  urls = [
-      "http://www.i7txt.cc/204/204048/",
-      "http://www.i7txt.cc/0/961/"
+      "https://www.121ds.cc/9950",
   ]
-  const baseUrl = urls[1];
+  const baseUrl = urls[0];
   // 在浏览器中打开一个新页面
   const page = await browser.newPage();
   // 主页URL
