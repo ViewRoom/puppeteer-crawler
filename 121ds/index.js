@@ -14,7 +14,7 @@ async function init() {
     // 启动时最大化浏览器窗口
     args: ["--start-maximized"],
     // 操作速度
-    slowMo: 250,
+    slowMo: 100,
   });
 
   // 调用函数开始爬取数据
@@ -31,9 +31,10 @@ async function init() {
 async function crawlData(browser) {
   // 定义基础URL
   const  urls = [
-      "https://www.121ds.cc/9950",
+      "https://www.121ds.cc/9950", // 九星毒奶
+      "https://www.121ds.cc/2909/" // 诸天尽头
   ]
-  const baseUrl = urls[0];
+  const baseUrl = urls[1];
   // 在浏览器中打开一个新页面
   const page = await browser.newPage();
   // 主页URL

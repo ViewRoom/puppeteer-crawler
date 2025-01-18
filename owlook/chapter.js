@@ -1,4 +1,4 @@
-import pLimit from "p-limit"; // 引入并发控制库
+import pLimit from "p-limit";
 import {
   appendFileContent,
   extractChapterInfo,
@@ -18,30 +18,34 @@ async function crawlChapterData(browser, baseUrl, basePage) {
   }
 
   // 定义选择器常量
-  const titleAndAuthorSelector =
-    ".book-title > h1, .book-stats > b:first-child";
-  const chapterListSelector = "#allchapter .details > dl > dd > a";
-  const chapterNameSelector = "#BookCon > h1";
-  const chapterContentSelector = "#BookCon #BookText";
+  const titleSelector = ".all-chapter #maininfo #info h1";
+  const authorSelector = ".all-chapter #maininfo #info > p";
+  const chapterListSelector = ".all-chapter > .box_con > #list > dl > dd > a";
+  const chapterNameSelector = ".all-content > .title > #content_name";
+  const chapterContentSelector = ".all-content > .show-content > #content";
 
   // 等待标题和作者选择器加载
-  await basePage.waitForSelector(titleAndAuthorSelector);
-  // 获取标题和作者信息
-  const [titleElement, authorElement] = await basePage.$$eval(
-    titleAndAuthorSelector,
-    (elements) => {
-      return [
-        elements[0].innerText,
-        elements[1].innerText.split("：")[1].trim(),
-      ];
-    },
+  await basePage.waitForSelector(titleSelector);
+  await basePage.waitForSelector(authorSelector);
+
+  // 获取标题元素
+  const titleElement = await basePage.$eval(
+    titleSelector,
+    (element) => element.innerText,
   );
 
-  const title = titleElement;
-  const author = authorElement;
+  // 获取作者元素
+  const authorElement = await basePage.$eval(authorSelector, (element) => {
+    console.log(element);
+    return element.innerText.split("：")[1].trim();
+  });
 
   // 保存小说名称和作者
-  saveFile(`./data/`, `${title}.txt`, `小说名称：${title}\n作者：${author}\n`);
+  saveFile(
+    `./data/`,
+    `${titleElement}.txt`,
+    `小说名称：${titleElement}\n作者：${authorElement}\n`,
+  );
 
   // 等待章节列表选择器加载
   await basePage.waitForSelector(chapterListSelector);
@@ -109,7 +113,7 @@ async function crawlChapterData(browser, baseUrl, basePage) {
     .filter(Boolean)
     .join("");
   // 追加章节内容到文件
-  appendFileContent(`./data/`, `${title}.txt`, chapterContents);
+  appendFileContent(`./data/`, `${titleElement}.txt`, chapterContents);
 }
 
 export { crawlChapterData };

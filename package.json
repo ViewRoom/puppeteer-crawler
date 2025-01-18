@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "brotato": "nodemon ./brotato/index.js",
-    "i7text": "nodemon ./i7text/index.js",
-    "121ds": "nodemon ./121ds/index.js"
+    "121ds": "nodemon ./121ds/index.js",
+    "owlook": "nodemon ./owlook/index.js"
   },
   "repository": {
     "type": "git",
@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/ViewRoom/puppeteer-crawler#readme",
   "dependencies": {
+    "p-limit": "^6.2.0",
     "puppeteer": "^23.6.1"
   },
   "devDependencies": {
