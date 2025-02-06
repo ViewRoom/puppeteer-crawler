@@ -14,7 +14,7 @@ async function init() {
     // 启动时最大化浏览器窗口
     args: ["--start-maximized"],
     // 操作速度
-    slowMo: 100,
+    // slowMo: 100,
   });
 
   // 调用函数开始爬取数据

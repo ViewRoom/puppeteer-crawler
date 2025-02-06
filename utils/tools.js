@@ -104,7 +104,7 @@ async function scrollToBottom(page, distance = 600, interval = 500) {
         }, interval);
       });
     },
-    { distance, interval },
+    { distance, interval }
   );
 }
 
@@ -130,7 +130,7 @@ async function getTargetPageByA(browser, sourcePage, selector) {
 
   // 等待新页面加载完成
   const newTarget = await browser.waitForTarget(
-    (target) => target.url() === charactersHref,
+    (target) => target.url() === charactersHref
   );
   const targetPage = await newTarget.page();
 
@@ -169,8 +169,13 @@ function numberToChinese(num) {
  * @returns {{chapterNum: string, chapterName: string}|null}
  */
 function extractChapterInfo(text) {
+  if (text.includes("章") && !text.includes("第")) {
+    text = "第一" + text;
+  }
+
   const regex = /第\s*(\d+|[零一二三四五六七八九十百千万亿]+)\s*章\s*(.*)/;
   const match = text.match(regex);
+
   if (match) {
     let chapterNum = match[1];
     if (!isNaN(Number(chapterNum))) {
