@@ -165,16 +165,15 @@ function numberToChinese(num) {
 
 /**
  * 提取章节信息
- * @param text 文本
+ * @param {string | number} text 文本
  * @returns {{chapterNum: string, chapterName: string}|null}
  */
 function extractChapterInfo(text) {
-  if (text.includes("章") && !text.includes("第")) {
-    text = "第一" + text;
-  }
-
-  const regex = /第\s*(\d+|[零一二三四五六七八九十百千万亿]+)\s*章\s*(.*)/;
-  const match = text.match(regex);
+  // 处理纯数字章节的情况
+  const numberOnlyRegex = /^(\d+)\s*(.*?)$/;
+  const regex =
+    /第\s*([\d零一二三四五六七八九十百千万亿]+)\s*章\s*(.*?)(?=\s*章|$)/;
+  const match = text.match(regex) || text.match(numberOnlyRegex);
 
   if (match) {
     let chapterNum = match[1];
@@ -183,7 +182,9 @@ function extractChapterInfo(text) {
     }
     let chapterName = match[2].trim();
     // 保留“番外”，删除其他括号及括号内的内容
-    chapterName = chapterName.replace(/\（(?!番外).*?\）/g, "").trim();
+    chapterName = chapterName
+      .replace(/\（(?!(番外|一|二|三|四|五|六|七|八|九|十|\d+)).*?\）/g, "")
+      .trim();
     if (chapterName === "") {
       chapterName = "无题";
     }

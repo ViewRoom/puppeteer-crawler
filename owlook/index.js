@@ -31,7 +31,8 @@ async function init() {
 async function crawlData(browser) {
   // 定义基础URL
   const urls = [
-    "https://www.owlook.com.cn/chapter?url=http://www.xbiqugu.net/33/33084/&novels_name=%E8%AF%B8%E5%A4%A9%E5%B0%BD%E5%A4%B4", // 诸天尽头
+    // "https://www.owlook.com.cn/chapter?url=http://www.xbiqugu.net/33/33084/&novels_name=%E8%AF%B8%E5%A4%A9%E5%B0%BD%E5%A4%B4", // 诸天尽头
+    "https://www.owlook.com.cn/chapter?url=http://www.xbiqugu.la/15/15428/&novels_name=%E8%B6%85%E7%A5%9E%E6%9C%BA%E6%A2%B0%E5%B8%88", // 超神机械师
   ];
   const baseUrl = urls[0];
   // 在浏览器中打开一个新页面

@@ -31,7 +31,7 @@ async function crawlChapterData(browser, baseUrl, basePage) {
   // 获取标题元素
   const titleElement = await basePage.$eval(
     titleSelector,
-    (element) => element.innerText,
+    (element) => element.innerText
   );
 
   // 获取作者元素
@@ -44,25 +44,29 @@ async function crawlChapterData(browser, baseUrl, basePage) {
   saveFile(
     `./data/`,
     `${titleElement}.txt`,
-    `小说名称：${titleElement}\n作者：${authorElement}\n`,
+    `小说名称：${titleElement}\n作者：${authorElement}\n`
   );
 
   // 等待章节列表选择器加载
   await basePage.waitForSelector(chapterListSelector);
-  const chapterElements = await basePage.$$(chapterListSelector);
 
   // 获取章节URL
-  const chapterUrlsPromises = chapterElements.map((chapterElement) =>
-    basePage.evaluate((ele) => ele.href, chapterElement),
-  );
-  const chapterUrls = await Promise.all(chapterUrlsPromises);
+  // 使用单个 evaluate 调用获取所有章节的 URL 和文本
+const chapterUrls = await basePage.evaluate((selectors) => {
+  return Array.from(document.querySelectorAll(selectors)).map(ele => ({
+    href: ele.href,
+    text: ele.textContent.trim(),
+  }));
+}, chapterListSelector);
 
   // 控制并发度为5
   const limit = pLimit(5);
+  let totalChapters = chapterUrls.length;
+  let completedChapters = 0;
   // 并发获取章节内容
-  const chapterContentsPromises = chapterUrls.map((url) =>
+  const chapterContentsPromises = chapterUrls.map(({href:url, text:chapterName}) =>
     limit(async () => {
-      let chapterName, chapterContent;
+      let chapterContent;
       const chapterPage = await browser.newPage();
       try {
         // 访问章节页面
@@ -71,18 +75,14 @@ async function crawlChapterData(browser, baseUrl, basePage) {
           timeout: 30000,
         });
 
-        // 等待章节名称和内容选择器加载
-        await chapterPage.waitForSelector(chapterNameSelector);
+        // 等待内容选择器加载
         await chapterPage.waitForSelector(chapterContentSelector);
 
-        // 获取章节名称和内容
-        chapterName = await chapterPage.$eval(chapterNameSelector, (element) =>
-          element.innerText.trim(),
-        );
+        // 获取内容
         chapterContent = await chapterPage.$eval(
           chapterContentSelector,
           (element) =>
-            element.innerText.replace(/\n\n/g, "\n").replace(/ /g, " "),
+            element.innerText.replace(/\n\n/g, "\n").replace(/ /g, " ")
         );
 
         // 处理章节信息
@@ -104,8 +104,11 @@ async function crawlChapterData(browser, baseUrl, basePage) {
       } finally {
         // 关闭章节页面
         await chapterPage.close();
+        // 更新完成的章节数并打印进度
+        completedChapters++;
+        console.log(`进度: ${completedChapters}/${totalChapters}`);
       }
-    }),
+    })
   );
 
   // 合并章节内容
