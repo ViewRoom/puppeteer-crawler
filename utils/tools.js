@@ -160,7 +160,7 @@ function numberToChinese(num) {
   if (result === "") {
     result = numArr[0];
   }
-  return result.replace(/零(千|百|十)/g, "零").replace(/零+/g, "零");
+  return result.replace(/零(千|百|十)/g, "零").replace(/零+/g, "");
 }
 
 /**
