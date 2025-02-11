@@ -144,7 +144,7 @@ async function getTargetPageByA(browser, sourcePage, selector) {
  */
 function numberToChinese(num) {
   const numArr = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
-  const unitArr = ["", "十", "百", "千", "万", "十万", "百万", "千万", "亿"];
+  const unitArr = ["", "十", "百", "千", "万", "十万", "百万"];
   let result = "";
   let index = 0;
   while (num > 0) {
@@ -160,7 +160,7 @@ function numberToChinese(num) {
   if (result === "") {
     result = numArr[0];
   }
-  return result.replace(/零(千|百|十)/g, "零").replace(/零+/g, "");
+  return result.replace(/零(百万|十万|万|千|百|十)/g, "零").replace(/零+/g, "");
 }
 
 /**
@@ -169,11 +169,8 @@ function numberToChinese(num) {
  * @returns {{chapterNum: string, chapterName: string}|null}
  */
 function extractChapterInfo(text) {
-  // 处理纯数字章节的情况
-  const numberOnlyRegex = /^(\d+)\s*(.*?)$/;
-  const regex =
-    /第\s*([\d零一二三四五六七八九十百千万亿]+)\s*章\s*(.*?)(?=\s*章|$)/;
-  const match = text.match(regex) || text.match(numberOnlyRegex);
+  const regex = /^第?\s*([\d零一二三四五六七八九十百千万]+)\s*章?\s+(.*?)$/;
+  const match = text.match(regex);
 
   if (match) {
     let chapterNum = match[1];
@@ -181,9 +178,9 @@ function extractChapterInfo(text) {
       chapterNum = numberToChinese(Number(chapterNum));
     }
     let chapterName = match[2].trim();
-    // 保留“番外”，删除其他括号及括号内的内容
+    // 保留特殊字符串，删除其他括号及括号内的内容
     chapterName = chapterName
-      .replace(/\（(?!(番外|一|二|三|四|五|六|七|八|九|十|\d+)).*?\）/g, "")
+      .replace(/\（(?!(番外|一|二|三|四|五|六|七|八|九|十|上|中|下|\d+)).*?\）/g, "")
       .trim();
     if (chapterName === "") {
       chapterName = "无题";

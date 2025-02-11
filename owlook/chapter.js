@@ -1,4 +1,3 @@
-import pLimit from "p-limit";
 import {
   appendFileContent,
   saveFile,
@@ -10,24 +9,24 @@ import {
  * @param {String} errorMsg 错误信息
  */
 function logError(errorMsg) {
-  appendFileContent(`./data/`, "error.log", `${errorMsg}\n`);
+  appendFileContent("./data/", "error.log", `${errorMsg}\n`);
 }
 
 /**
  * 尝试执行异步操作，最多重试 maxRetries 次
  * @param {Function} asyncFunc 异步函数
  * @param {Number} maxRetries 最大重试次数
- * @param {Array} args 异步函数的参数
+ * @param {String} url 请求的URL地址
  * @returns {Promise} 异步操作的结果
  */
-async function retryAsync(asyncFunc, maxRetries, ...args) {
+async function retryAsync(asyncFunc, maxRetries, url) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      return await asyncFunc(...args);
+      return await asyncFunc();
     } catch (error) {
       if (attempt === maxRetries) {
-        logError(`Failed after ${maxRetries} retries: ${error.message}`);
-        throw error; // 重新抛出错误，以便上层处理
+        logError(`请求<${url}>[${maxRetries}]次: ${error.message}`);
+        throw new Error(`Operation failed after retries: ${error.message}`);
       }
     }
   }
@@ -40,103 +39,117 @@ async function retryAsync(asyncFunc, maxRetries, ...args) {
  * @param {Object} basePage 首页对象
  */
 async function crawlChapterData(browser, baseUrl, basePage) {
-  // 校验输入参数
   if (!browser || !baseUrl || !basePage) {
     throw new Error("Invalid input parameters");
   }
 
   // 定义选择器常量
-  const titleSelector = ".all-chapter #maininfo #info h1";
+  const titleSelector = ".all-chapter #maininfo #info > h1";
   const authorSelector = ".all-chapter #maininfo #info > p";
   const chapterListSelector = ".all-chapter > .box_con > #list > dl > dd > a";
   const chapterContentSelector = ".all-content > .show-content > #content";
 
-  // 等待标题和作者选择器加载
+  // 等待标题和作者元素加载
   await basePage.waitForSelector(titleSelector);
   await basePage.waitForSelector(authorSelector);
 
-  // 获取标题元素
+  // 获取标题和作者信息
   const titleElement = await basePage.$eval(
     titleSelector,
-    (element) => element.innerText
+    (el) => el.innerText
   );
-
-  // 获取作者元素
-  const authorElement = await basePage.$eval(authorSelector, (element) => {
-    return element.innerText.split("：")[1].trim();
+  const authorElement = await basePage.$eval(authorSelector, (el) => {
+    const parts = el.innerText.split("：");
+    return parts.length > 1 ? parts[1].trim() : "未知作者";
   });
 
-  // 保存小说名称和作者
-  saveFile(
-    `./data/`,
-    `${titleElement}.txt`,
-    `小说名称：${titleElement}\n作者：${authorElement}\n`
-  );
+  // 保存小说信息到文件
+  const novelInfo = `小说名称：${titleElement}\n作者：${authorElement}\n`;
+  saveFile("./data/", `${titleElement}.txt`, novelInfo);
 
-  // 等待章节列表选择器加载
+  // 等待章节列表加载
   await basePage.waitForSelector(chapterListSelector);
 
-  // 获取章节URL
+  // 获取章节URLs
   const chapterUrls = await basePage.evaluate((selectors) => {
-    return Array.from(document.querySelectorAll(selectors)).map((ele) => ({
-      href: ele.href,
-      text: ele.textContent.trim(),
+    return Array.from(document.querySelectorAll(selectors)).map((el) => ({
+      url: el.href,
+      text: el.textContent.trim(),
     }));
   }, chapterListSelector);
 
-  // 控制并发度为5
-  const limit = pLimit(5);
+  // 过滤有效的章节URLs
+  const validChapterUrls = chapterUrls.filter(({ text }) =>
+    extractChapterInfo(text)
+  );
 
-  // 并发获取章节内容
-  const chapterContentsPromises = chapterUrls.map(
-    ({ href: url, text: chapterName }) =>
-      limit(async () => {
+  // 初始化章节内容和计数器
+  let chapterContents = "";
+  let chapterCount = 0;
+  let chapterLength = validChapterUrls.length;
+  // 最大尝试次数
+  let maxRetries = 3;
+
+  // 并发处理章节
+  const batchSize = 10;
+  for (let i = 0; i < validChapterUrls.length; i += batchSize) {
+    const batch = validChapterUrls.slice(i, i + batchSize);
+    const batchResults = await Promise.all(
+      batch.map(async ({ url, text }) => {
         let chapterContent;
         const chapterPage = await browser.newPage();
         try {
-          // 使用重试函数尝试获取章节内容
-          chapterContent = await retryAsync(async () => {
-            await chapterPage.goto(url, {
-              waitUntil: "networkidle2",
-              timeout: 30000,
-            });
-            await chapterPage.waitForSelector(chapterContentSelector);
-            return await chapterPage.$eval(chapterContentSelector, (element) =>
-              element.innerText.replace(/\n\n/g, "\n").replace(/ /g, " ")
-            );
-          }, 3); // 最大重试3次
+          // 使用重试机制获取章节内容
+          chapterContent = await retryAsync(
+            async () => {
+              await chapterPage.goto(url, {
+                waitUntil: "networkidle2",
+                timeout: 30000,
+              });
+              await chapterPage.waitForSelector(chapterContentSelector);
+              return await chapterPage.$eval(chapterContentSelector, (el) =>
+                el.innerText.replace(/\n\n/g, "\n").replace(/ /g, " ")
+              );
+            },
+            maxRetries,
+            url
+          );
 
-          // 处理章节信息
-          if (extractChapterInfo(chapterName)) {
-            const { chapterName: name, chapterNum } =
-              extractChapterInfo(chapterName);
-            let chapterText = "";
-            if (chapterNum) {
-              chapterText = `\n第${chapterNum}章 ${name}\n\n${chapterContent}\n`;
-            } else {
-              chapterText = `\n${name}\n\n${chapterContent}\n`;
-            }
+          // 提取章节信息并格式化内容
+          const { chapterName, chapterNum } = extractChapterInfo(text);
+          const chapterText = chapterNum
+            ? `\n第${chapterNum}章 ${chapterName}\n\n${chapterContent}\n`
+            : `\n${chapterName}\n\n${chapterContent}\n`;
 
-            console.log(`第${chapterNum || 0}章 ${name}`);
-            
-            return chapterText;
-          }
+          return { chapterText, chapterNum, chapterName };
         } catch (error) {
-          // 如果重试后仍然失败，则抛出错误（由上层调用者处理）
+          logError(`获取章节【${chapterName}】失败: ${error.message}`);
           throw error;
         } finally {
           await chapterPage.close();
         }
       })
-  );
+    );
 
-  // 合并章节内容
-  const chapterContents = (await Promise.all(chapterContentsPromises))
-    .filter(Boolean)
-    .join("");
+    batchResults.forEach(({ chapterText, chapterNum, chapterName }) => {
+      chapterContents += chapterText;
+      chapterCount++;
+      console.log(`第${chapterNum || 0}章 ${chapterName}`);
+    });
 
-  // 追加章节内容到文件
-  appendFileContent(`./data/`, `${titleElement}.txt`, chapterContents);
+    console.log(`爬取进度: ${chapterCount}/${chapterLength}`);
+
+    // 每100章保存一次内容到文件
+    if (chapterCount % 100 === 0) {
+      appendFileContent("./data/", `${titleElement}.txt`, chapterContents);
+      chapterContents = "";
+    }
+  }
+
+  // 保存剩余的章节内容到文件
+  if (chapterContents) {
+    appendFileContent("./data/", `${titleElement}.txt`, chapterContents);
+  }
 }
 
 export { crawlChapterData };
