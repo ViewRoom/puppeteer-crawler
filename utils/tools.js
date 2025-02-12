@@ -8,11 +8,13 @@ import https from "https";
  */
 function mkdir(filePath) {
   try {
-    if (!fs.existsSync(filePath)) {
-      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    const dirPath = path.dirname(filePath);
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
     }
   } catch (error) {
-    console.log("创建目录失败", error);
+    console.error("创建目录失败", error);
+    throw error;
   }
 }
 
@@ -23,11 +25,13 @@ function mkdir(filePath) {
  * @param {*} data 文件内容
  */
 function saveFile(filePath, fileName, data) {
-  mkdir(filePath + fileName);
+  const fullPath = path.join(filePath, fileName);
+  mkdir(fullPath);
   try {
-    fs.writeFileSync(path.join(filePath, fileName), data);
+    fs.writeFileSync(fullPath, data);
   } catch (error) {
-    console.log("保存文件失败", error);
+    console.error("保存文件失败", error);
+    throw error;
   }
 }
 
@@ -38,16 +42,26 @@ function saveFile(filePath, fileName, data) {
  * @param {string} content 文件内容
  */
 function appendFileContent(filePath, fileName, content) {
-  mkdir(filePath + fileName);
+  const fullPath = path.join(filePath, fileName);
+  mkdir(fullPath);
   try {
-    // 读取文件内容
-    const data = fs.readFileSync(path.join(filePath, fileName));
-    // 附加新内容
-    const updatedContent = data + content;
-    // 写回文件
-    fs.writeFileSync(path.join(filePath, fileName), updatedContent);
+    const stream = fs.createReadStream(fullPath);
+    let data = "";
+    stream.on("data", (chunk) => (data += chunk));
+    stream.on("end", () => {
+      const updatedContent = Buffer.concat([
+        Buffer.from(data),
+        Buffer.from(content),
+      ]);
+      fs.writeFileSync(fullPath, updatedContent);
+    });
+    stream.on("error", (err) => {
+      console.error("读取文件出错:", err);
+      throw err;
+    });
   } catch (err) {
     console.error("文件操作出错:", err);
+    throw err;
   }
 }
 
@@ -58,27 +72,26 @@ function appendFileContent(filePath, fileName, content) {
  * @param {string} imgUrl 图片地址
  */
 function saveImage(imgPath, imgName, imgUrl) {
-  const fullPath = imgPath + imgName;
+  const fullPath = path.join(imgPath, imgName);
   mkdir(fullPath);
 
+  const file = fs.createWriteStream(fullPath);
   https
     .get(imgUrl, function (res) {
-      let imgData = "";
-      res.setEncoding("binary");
-      res.on("data", function (chunk) {
-        imgData += chunk;
+      res.pipe(file);
+      file.on("finish", () => {
+        file.close();
+        console.log("保存图片成功", fullPath);
       });
-      res.on("end", function () {
-        try {
-          fs.writeFileSync(fullPath, imgData, "binary");
-          console.log("保存图片成功", fullPath);
-        } catch (err) {
-          console.log("保存图片失败", err.message);
-        }
+      file.on("error", function (err) {
+        fs.unlink(fullPath); // 删除不完整的文件
+        console.error("保存图片失败", err.message);
+        throw err;
       });
     })
     .on("error", function (err) {
       console.error("请求图片时发生错误:", err.message);
+      throw err;
     });
 }
 
@@ -129,8 +142,8 @@ async function getTargetPageByA(browser, sourcePage, selector) {
   await sourcePage.click(selector);
 
   // 等待新页面加载完成
-  const newTarget = await browser.waitForTarget(
-    (target) => target.url() === charactersHref
+  const newTarget = await browser.waitForTarget((target) =>
+    target.url().startsWith(charactersHref)
   );
   const targetPage = await newTarget.page();
 
@@ -180,7 +193,10 @@ function extractChapterInfo(text) {
     let chapterName = match[2].trim();
     // 保留特殊字符串，删除其他括号及括号内的内容
     chapterName = chapterName
-      .replace(/\（(?!(番外|一|二|三|四|五|六|七|八|九|十|上|中|下|\d+)).*?\）/g, "")
+      .replace(
+        /\（(?!(番外|一|二|三|四|五|六|七|八|九|十|上|中|下|\d+)).*?\）/g,
+        ""
+      )
       .trim();
     if (chapterName === "") {
       chapterName = "无题";
