@@ -2,6 +2,7 @@ import {
   appendFileContent,
   saveFile,
   extractChapterInfo,
+  extractNovelsNameFromUrl,
 } from "../utils/tools.js";
 
 /**
@@ -44,28 +45,13 @@ async function crawlChapterData(browser, baseUrl, basePage) {
   }
 
   // 定义选择器常量
-  const titleSelector = ".all-chapter #maininfo #info > h1";
-  const authorSelector = ".all-chapter #maininfo #info > p";
-  const chapterListSelector = ".all-chapter > .box_con > #list > dl > dd > a";
-  const chapterContentSelector = ".all-content > .show-content > #content";
+  const chapterListSelector = ".all-chapter .listmain dl dd a";
+  const chapterContentSelector = "#chaptercontent";
 
-  // 等待标题和作者元素加载
-  await basePage.waitForSelector(titleSelector);
-  await basePage.waitForSelector(authorSelector);
-
-  // 获取标题和作者信息
-  const titleElement = await basePage.$eval(
-    titleSelector,
-    (el) => el.innerText
-  );
-  const authorElement = await basePage.$eval(authorSelector, (el) => {
-    const parts = el.innerText.split("：");
-    return parts.length > 1 ? parts[1].trim() : "未知作者";
-  });
+  let titleElement = extractNovelsNameFromUrl(baseUrl);
 
   // 保存小说信息到文件
-  const novelInfo = `小说名称：${titleElement}\n作者：${authorElement}\n`;
-  saveFile("./data/", `${titleElement}.txt`, novelInfo);
+  saveFile("./data/", `${titleElement}.txt`, "");
 
   // 等待章节列表加载
   await basePage.waitForSelector(chapterListSelector);
@@ -140,7 +126,7 @@ async function crawlChapterData(browser, baseUrl, basePage) {
     console.log(`爬取进度: ${chapterCount}/${chapterLength}`);
 
     // 每100章保存一次内容到文件
-    if (chapterCount % 100 === 0) {
+    if (chapterCount % 500 === 0) {
       appendFileContent("./data/", `${titleElement}.txt`, chapterContents);
       chapterContents = "";
     }

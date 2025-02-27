@@ -28,7 +28,7 @@ function saveFile(filePath, fileName, data) {
   const fullPath = path.join(filePath, fileName);
   mkdir(fullPath);
   try {
-    fs.writeFileSync(fullPath, data);
+    fs.writeFileSync(fullPath, data, "utf8");
   } catch (error) {
     console.error("保存文件失败", error);
     throw error;
@@ -53,7 +53,7 @@ function appendFileContent(filePath, fileName, content) {
         Buffer.from(data),
         Buffer.from(content),
       ]);
-      fs.writeFileSync(fullPath, updatedContent);
+      fs.writeFileSync(fullPath, updatedContent, "utf8");
     });
     stream.on("error", (err) => {
       console.error("读取文件出错:", err);
@@ -182,7 +182,7 @@ function numberToChinese(num) {
  * @returns {{chapterNum: string, chapterName: string}|null}
  */
 function extractChapterInfo(text) {
-  const regex = /^第?\s*([\d零一二三四五六七八九十百千万]+)\s*章?\s+(.*?)$/;
+  const regex = /^第?\s*([\d零一二三四五六七八九十百千万]+)\s*章?\s*(.*?)$/;
   const match = text.match(regex);
 
   if (match) {
@@ -211,6 +211,38 @@ function extractChapterInfo(text) {
   }
 }
 
+/**
+ * 从给定URL中提取并解码小说名称
+ * @param {string} url - 包含小说名称查询参数的URL
+ * @returns {string} - 解码后的小说名称
+ */
+function extractNovelsNameFromUrl(url) {
+  try {
+    // 创建一个URL对象
+    const urlObject = new URL(url);
+
+    // 获取查询参数对象
+    const params = new URLSearchParams(urlObject.search);
+
+    // 提取novels_name参数的值
+    const novelsNameEncoded = params.get("novels_name");
+
+    if (!novelsNameEncoded) {
+      throw new Error("查询参数中不存在novels_name");
+    }
+
+    // 对值进行URL解码
+    const novelsNameDecoded = decodeURIComponent(novelsNameEncoded);
+
+    // 返回解码后的小说名称
+    return novelsNameDecoded;
+  } catch (error) {
+    // 捕获并处理错误
+    console.error("提取小说名称时出错:", error.message);
+    return null; // 或者根据需要返回其他错误指示值
+  }
+}
+
 export {
   mkdir,
   saveFile,
@@ -220,4 +252,5 @@ export {
   appendFileContent,
   numberToChinese,
   extractChapterInfo,
+  extractNovelsNameFromUrl,
 };
