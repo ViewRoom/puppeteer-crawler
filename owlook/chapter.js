@@ -4,13 +4,16 @@ import {
   extractChapterInfo,
   extractNovelsNameFromUrl,
 } from "../utils/tools.js";
+import pLimit from "p-limit";
+
+const DATA_PATH = "./data/";
 
 /**
  * 记录错误信息到 error.log
  * @param {String} errorMsg 错误信息
  */
 function logError(errorMsg) {
-  appendFileContent("./data/", "error.log", `${errorMsg}\n`);
+  appendFileContent(DATA_PATH, "error.log", `${errorMsg}\n`);
 }
 
 /**
@@ -27,31 +30,46 @@ async function retryAsync(asyncFunc, maxRetries, url) {
     } catch (error) {
       if (attempt === maxRetries) {
         logError(`请求<${url}>[${maxRetries}]次: ${error.message}`);
-        throw new Error(`Operation failed after retries: ${error.message}`);
+        throw new Error(`Operation failed after retries: ${error.message}`, {
+          cause: error,
+        });
       }
     }
   }
 }
 
 /**
- * 获取章节数据
- * @param {Object} browser 浏览器对象
- * @param {String} baseUrl 网站基础URL
- * @param {Object} basePage 首页对象
+ * 异步爬取小说章节数据
+ *
+ * @param {Puppeteer.Browser} browser - Puppeteer的浏览器实例
+ * @param {string} baseUrl - 爬取的目标小说的基础URL
+ * @param {Puppeteer.Page} basePage - Puppeteer的页面实例，用于爬取小说标题和章节列表
+ * @returns {Promise<void>}
+ * @throws {Error} - 如果输入参数无效，则抛出错误
  */
 async function crawlChapterData(browser, baseUrl, basePage) {
-  if (!browser || !baseUrl || !basePage) {
+  // 验证输入参数
+  if (
+    !browser ||
+    typeof browser !== "object" ||
+    !baseUrl ||
+    typeof baseUrl !== "string" ||
+    !basePage ||
+    typeof basePage !== "object"
+  ) {
     throw new Error("Invalid input parameters");
   }
 
   // 定义选择器常量
+  const novelTitleSelector = "#bookinfo > div.bookright > div.booktitle > h1";
   const chapterListSelector = ".all-chapter .listmain dl dd a";
   const chapterContentSelector = "#chaptercontent";
 
-  let titleElement = extractNovelsNameFromUrl(baseUrl);
+  // 获取小说标题
+  const novelTitle = extractNovelsNameFromUrl(baseUrl);
 
   // 保存小说信息到文件
-  saveFile("./data/", `${titleElement}.txt`, "");
+  saveFile(DATA_PATH, `${novelTitle}.txt`, "");
 
   // 等待章节列表加载
   await basePage.waitForSelector(chapterListSelector);
@@ -69,72 +87,67 @@ async function crawlChapterData(browser, baseUrl, basePage) {
     extractChapterInfo(text)
   );
 
-  // 初始化章节内容和计数器
-  let chapterContents = "";
-  let chapterCount = 0;
-  let chapterLength = validChapterUrls.length;
-  // 最大尝试次数
-  let maxRetries = 3;
+  const maxRetries = 3;
 
   // 并发处理章节
   const batchSize = 10;
-  for (let i = 0; i < validChapterUrls.length; i += batchSize) {
-    const batch = validChapterUrls.slice(i, i + batchSize);
-    const batchResults = await Promise.all(
-      batch.map(async ({ url, text }) => {
-        let chapterContent;
-        const chapterPage = await browser.newPage();
+  const limit = pLimit(batchSize); // 创建一个限制并发数的函数
+
+  const promises = validChapterUrls.map(({ url, text }) =>
+    limit(async () => {
+      let chapterContent;
+      const chapterPage = await browser.newPage();
+      try {
+        // 使用重试机制获取章节内容
+        chapterContent = await retryAsync(
+          async () => {
+            await chapterPage.goto(url, {
+              waitUntil: "networkidle2",
+              timeout: 30000,
+            });
+            await chapterPage.waitForSelector(chapterContentSelector);
+            return await chapterPage.$eval(chapterContentSelector, (el) =>
+              el.innerText.replace(/\n\n/g, "\n").replace(/ /g, " ")
+            );
+          },
+          maxRetries,
+          url
+        );
+
+        // 提取章节信息并格式化内容
+        const { chapterName, chapterNum } = extractChapterInfo(text);
+        const chapterText = chapterNum
+          ? `\n第${chapterNum}章 ${chapterName}\n\n${chapterContent}\n`
+          : `\n${chapterName}\n\n${chapterContent}\n`;
+
+        console.log(`第${chapterNum || 0}章 ${chapterName}`);
+
+        return { chapterText, chapterNum, chapterName };
+      } catch (error) {
+        logError(`获取章节【${chapterName}】失败: ${error.message}`);
+        throw error;
+      } finally {
         try {
-          // 使用重试机制获取章节内容
-          chapterContent = await retryAsync(
-            async () => {
-              await chapterPage.goto(url, {
-                waitUntil: "networkidle2",
-                timeout: 30000,
-              });
-              await chapterPage.waitForSelector(chapterContentSelector);
-              return await chapterPage.$eval(chapterContentSelector, (el) =>
-                el.innerText.replace(/\n\n/g, "\n").replace(/ /g, " ")
-              );
-            },
-            maxRetries,
-            url
-          );
-
-          // 提取章节信息并格式化内容
-          const { chapterName, chapterNum } = extractChapterInfo(text);
-          const chapterText = chapterNum
-            ? `\n第${chapterNum}章 ${chapterName}\n\n${chapterContent}\n`
-            : `\n${chapterName}\n\n${chapterContent}\n`;
-
-          return { chapterText, chapterNum, chapterName };
-        } catch (error) {
-          logError(`获取章节【${chapterName}】失败: ${error.message}`);
-          throw error;
-        } finally {
           await chapterPage.close();
+        } catch (error) {
+          logError(`关闭页面失败: ${error.message}`);
         }
-      })
-    );
+      }
+    })
+  );
 
-    batchResults.forEach(({ chapterText, chapterNum, chapterName }) => {
-      chapterContents += chapterText;
-      chapterCount++;
-      console.log(`第${chapterNum || 0}章 ${chapterName}`);
-    });
+  // 使用 Promise.allSettled 确保所有请求都能完成
+  const batchResults = await Promise.allSettled(promises);
 
-    console.log(`爬取进度: ${chapterCount}/${chapterLength}`);
+  // 收集所有成功的结果
+  const successfulResults = batchResults
+    .filter((result) => result.status === "fulfilled")
+    .map((result) => result.value.chapterText)
+    .join("");
 
-    // 每100章保存一次内容到文件
-    if (chapterCount % 500 === 0) {
-      appendFileContent("./data/", `${titleElement}.txt`, chapterContents);
-      chapterContents = "";
-    }
-  }
-
-  // 保存剩余的章节内容到文件
-  if (chapterContents) {
-    appendFileContent("./data/", `${titleElement}.txt`, chapterContents);
+  // 章节内容到文件
+  if (successfulResults) {
+    appendFileContent(DATA_PATH, `${novelTitle}.txt`, successfulResults);
   }
 }
 

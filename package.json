@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "owlook": "nodemon ./owlook/index.js",
-    "xuanyge": "nodemon ./xuanyge/index.js"
+    "xuanyge": "nodemon ./xuanyge/index.js",
+    "deqixs": "nodemon ./deqixs/index.js"
   },
   "repository": {
     "type": "git",

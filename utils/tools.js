@@ -4,11 +4,10 @@ import https from "https";
 
 /**
  * 创建目录
- * @param {string} filePath
+ * @param {string} dirPath 目录路径
  */
-function mkdir(filePath) {
+function mkdir(dirPath) {
   try {
-    const dirPath = path.dirname(filePath);
     if (!fs.existsSync(dirPath)) {
       fs.mkdirSync(dirPath, { recursive: true });
     }
@@ -26,7 +25,7 @@ function mkdir(filePath) {
  */
 function saveFile(filePath, fileName, data) {
   const fullPath = path.join(filePath, fileName);
-  mkdir(fullPath);
+  mkdir(path.dirname(fullPath));
   try {
     fs.writeFileSync(fullPath, data, "utf8");
   } catch (error) {
@@ -36,29 +35,16 @@ function saveFile(filePath, fileName, data) {
 }
 
 /**
- * 写入文件内容
+ * 追加文件内容
  * @param {string} filePath 文件路径
  * @param {string} fileName 文件名称
  * @param {string} content 文件内容
  */
 function appendFileContent(filePath, fileName, content) {
   const fullPath = path.join(filePath, fileName);
-  mkdir(fullPath);
+  mkdir(path.dirname(fullPath));
   try {
-    const stream = fs.createReadStream(fullPath);
-    let data = "";
-    stream.on("data", (chunk) => (data += chunk));
-    stream.on("end", () => {
-      const updatedContent = Buffer.concat([
-        Buffer.from(data),
-        Buffer.from(content),
-      ]);
-      fs.writeFileSync(fullPath, updatedContent, "utf8");
-    });
-    stream.on("error", (err) => {
-      console.error("读取文件出错:", err);
-      throw err;
-    });
+    fs.appendFileSync(fullPath, content, "utf8");
   } catch (err) {
     console.error("文件操作出错:", err);
     throw err;
@@ -71,28 +57,35 @@ function appendFileContent(filePath, fileName, content) {
  * @param {string} imgName 图片名称
  * @param {string} imgUrl 图片地址
  */
-function saveImage(imgPath, imgName, imgUrl) {
+async function saveImage(imgPath, imgName, imgUrl) {
   const fullPath = path.join(imgPath, imgName);
-  mkdir(fullPath);
+  mkdir(path.dirname(fullPath));
 
-  const file = fs.createWriteStream(fullPath);
-  https
-    .get(imgUrl, function (res) {
-      res.pipe(file);
-      file.on("finish", () => {
-        file.close();
-        console.log("保存图片成功", fullPath);
-      });
-      file.on("error", function (err) {
-        fs.unlink(fullPath); // 删除不完整的文件
-        console.error("保存图片失败", err.message);
-        throw err;
-      });
-    })
-    .on("error", function (err) {
-      console.error("请求图片时发生错误:", err.message);
-      throw err;
+  try {
+    await new Promise((resolve, reject) => {
+      const file = fs.createWriteStream(fullPath);
+      https
+        .get(imgUrl, function (res) {
+          res.pipe(file);
+          file.on("finish", () => {
+            file.close();
+            resolve();
+            console.log("保存图片成功", fullPath);
+          });
+          file.on("error", function (err) {
+            fs.unlink(fullPath); // 删除不完整的文件
+            console.error("保存图片失败", err.message);
+            reject(err);
+          });
+        })
+        .on("error", function (err) {
+          console.error("请求图片时发生错误:", err.message);
+          reject(err);
+        });
     });
+  } catch (err) {
+    throw err;
+  }
 }
 
 /**
@@ -136,18 +129,12 @@ async function getTargetPageByA(browser, sourcePage, selector) {
   const charactersHref = await sourcePage.$eval(selector, (el) => el.href);
 
   // 在新标签页中打开链接
-  await sourcePage.$eval(selector, (el) => el.setAttribute("target", "_blank"));
+  const [newPage] = await Promise.all([
+    browser.waitForTarget((target) => target.url().startsWith(charactersHref)),
+    sourcePage.click(selector),
+  ]);
 
-  // 点击 a 标签
-  await sourcePage.click(selector);
-
-  // 等待新页面加载完成
-  const newTarget = await browser.waitForTarget((target) =>
-    target.url().startsWith(charactersHref)
-  );
-  const targetPage = await newTarget.page();
-
-  return targetPage;
+  return newPage;
 }
 
 /**
