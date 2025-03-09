@@ -7,6 +7,7 @@ import pLimit from "p-limit";
 import { URL } from "url";
 
 const DATA_PATH = "./data/";
+const errorData = [];
 
 /**
  * 记录错误信息到 error.log
@@ -15,7 +16,7 @@ const DATA_PATH = "./data/";
 function logError(errorMsg) {
   const timestamp = new Date().toISOString();
   const formattedMsg = `[${timestamp}] ${errorMsg}\n`;
-  appendFileContent(DATA_PATH, "error.log", formattedMsg);
+  errorData.push(formattedMsg);
 }
 
 /**
@@ -146,6 +147,7 @@ async function crawlChapterData(browser, baseUrl, basePage) {
   const promises = allChapterUrls.map(({ url, text }) =>
     limit(async () => {
       let chapterContent = "";
+      const { chapterName, chapterNum } = extractChapterInfo(text);
       const chapterPage = await browser.newPage();
       try {
         // 使用重试机制获取章节内容
@@ -188,11 +190,10 @@ async function crawlChapterData(browser, baseUrl, basePage) {
           },
           maxRetries,
           url,
-          chapterTitle
+          `第${chapterNum}章 ${chapterName}`
         );
 
         // 提取章节信息并格式化内容
-        const { chapterName, chapterNum } = extractChapterInfo(text);
         const chapterText = chapterNum
           ? `\n第${chapterNum}章 ${chapterName}\n\n${chapterContent}\n`
           : `\n${chapterName}\n\n${chapterContent}\n`;
@@ -225,6 +226,9 @@ async function crawlChapterData(browser, baseUrl, basePage) {
   // 章节内容到文件
   if (successfulResults) {
     appendFileContent(DATA_PATH, `${novelTitle}.txt`, successfulResults);
+  }
+  if (errorData.length > 0) {
+    appendFileContent(DATA_PATH, "error.log", errorData.join("\n"));
   }
 }
 
