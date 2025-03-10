@@ -127,7 +127,7 @@ async function crawlChapterData(browser, baseUrl, basePage) {
 
     // 进入下一页
     await nextPageButton.click();
-    await basePage.waitForNavigation({ waitUntil: "networkidle2" });
+    await basePage.waitForNavigation({ waitUntil: "domcontentloaded" });
   }
 
   if (allChapterUrls.length === 0) {
@@ -136,7 +136,7 @@ async function crawlChapterData(browser, baseUrl, basePage) {
   }
 
   // 重试次数
-  const maxRetries = 5;
+  const maxRetries = 4;
   // 并发处理章节
   const batchSize = 2;
   // 创建一个限制并发数的函数
@@ -152,8 +152,8 @@ async function crawlChapterData(browser, baseUrl, basePage) {
         await retryAsync(
           async () => {
             await chapterPage.goto(url, {
-              waitUntil: "networkidle2",
-              timeout: 30000,
+              waitUntil: "domcontentloaded",
+              timeout: 10000,
             });
 
             // 等待章节内容加载并提取文本
@@ -164,7 +164,7 @@ async function crawlChapterData(browser, baseUrl, basePage) {
             chapterContent.push(
               await contentElement.evaluate((el) =>
                 el.innerText
-                  .replace(/\n\n/g, "\n\t")
+                  .replace(/\n\n/g, "\n")
                   .replace(/ /g, " ")
                   .padStart()
               )
@@ -182,7 +182,7 @@ async function crawlChapterData(browser, baseUrl, basePage) {
               if (nextPageButtonText === nextPageText) {
                 await nextPageButton.click();
                 await chapterPage.waitForNavigation({
-                  waitUntil: "networkidle2",
+                  waitUntil: "domcontentloaded",
                 });
                 const nextContentElement = await chapterPage.waitForSelector(
                   chapterContentSelector,
