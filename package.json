@@ -7,10 +7,10 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "owlook": "node index.js owlook",
-    "xuanyge": "node index.js xuanyge",
-    "deqixs": "node index.js deqixs",
-    "all": "node index.js all"
+    "owlook": "nodemon index.js owlook",
+    "xuanyge": "nodemon index.js xuanyge",
+    "deqixs": "nodemon index.js deqixs",
+    "all": "nodemon index.js all"
   },
   "repository": {
     "type": "git",
