@@ -1,0 +1,11 @@
+.git
+.serena
+node_modules
+data
+logs
+log
+novels
+dist
+coverage
+.env
+.playwright-mcp
