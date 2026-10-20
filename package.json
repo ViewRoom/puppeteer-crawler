@@ -12,12 +12,14 @@
   },
   "scripts": {
     "start": "tsx src/cli/index.ts",
+    "web": "vite build && tsx src/server/index.ts",
+    "dev": "vite --host 127.0.0.1",
     "server:dev": "tsx src/server/index.ts",
     "start:web": "node dist/server/index.js",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && vite build",
     "test": "vitest run",
     "format": "prettier --write .",
-    "check": "tsc --noEmit && npm test && npm run build && prettier --check ."
+    "check": "tsc --noEmit && tsc --noEmit -p tsconfig.web.json && npm test && npm run build && prettier --check ."
   },
   "repository": {
     "type": "git",
