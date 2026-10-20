@@ -1,0 +1,18 @@
+{
+  "name": "bingfengxs",
+  "transport": "http",
+  "baseUrls": ["http://www.bingfengxs.com/198/198226/"],
+  "selectors": {
+    "novelTitle": ".ml_title h1",
+    "chapterList": ".ml_main dd a",
+    "chapterContent": ".yd_text2",
+    "remove": ["#center_tip", "script", "style", "ins"]
+  },
+  "request": {
+    "timeoutMs": 30000,
+    "retries": 3,
+    "retryDelayMs": 1000,
+    "intervalMs": 1000
+  },
+  "concurrency": 2
+}

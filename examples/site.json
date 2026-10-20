@@ -1,0 +1,25 @@
+{
+  "name": "example",
+  "baseUrls": ["https://example.com/book/"],
+  "selectors": {
+    "novelTitle": "h1",
+    "chapterList": ".chapter-list a",
+    "chapterContent": "#content",
+    "remove": [".advertisement", "script"]
+  },
+  "pagination": {
+    "catalog": { "selector": "a.next-page", "maxPages": 100 },
+    "content": {
+      "selector": "a.next-page",
+      "text": "下一页",
+      "maxPages": 20
+    }
+  },
+  "request": {
+    "timeoutMs": 30000,
+    "retries": 3,
+    "retryDelayMs": 1000,
+    "intervalMs": 500
+  },
+  "concurrency": 2
+}

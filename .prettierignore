@@ -1,0 +1,10 @@
+node_modules
+dist
+coverage
+data
+logs
+log
+novels
+.serena
+package-lock.json
+.playwright-mcp
